@@ -6,8 +6,12 @@
   const valid=v=>v==='dark'||v==='light';
   const read=()=>{try{return localStorage.getItem(key);}catch{return null;}};
   let choice=read();
+  const sourceSelector='source[data-feature-night]';
+  const nightMedia=()=>root.dataset.theme==='dark'?'all':'not all';
+  function syncSource(s){const media=nightMedia();if(s.media!==media)s.media=media;}
   function controls(){
     const dark=root.dataset.theme==='dark';
+    document.querySelectorAll(sourceSelector).forEach(syncSource);
     for(const b of document.querySelectorAll('[data-theme-toggle]')){
       b.setAttribute('aria-pressed',String(dark));b.title=dark?b.dataset.light:b.dataset.dark;
     }
@@ -21,7 +25,20 @@
     if(changed)window.dispatchEvent(new CustomEvent('geodema:theme',{detail:next}));
   }
   apply();
-  document.addEventListener('DOMContentLoaded',controls,{once:true});
+  // On an OS/override mismatch, pair newly parsed <source>s with the resolved theme before
+  // their lazy images paint, even when arriving on a fragment half-way down the page.
+  let parsing;
+  if(valid(choice)&&system.matches!==(choice==='dark')){
+    parsing=new MutationObserver(records=>{
+      for(const r of records)for(const n of r.addedNodes){
+        if(n.nodeType!==1)continue;
+        if(n.matches(sourceSelector))syncSource(n);
+        else n.querySelectorAll(sourceSelector).forEach(syncSource);
+      }
+    });
+    parsing.observe(root,{childList:true,subtree:true});
+  }
+  document.addEventListener('DOMContentLoaded',()=>{parsing?.disconnect();controls();},{once:true});
   document.addEventListener('click',e=>{const b=e.target.closest?.('[data-theme-toggle]');if(!b)return;
     choice=root.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem(key,choice);}catch{}apply();
   });
