@@ -3,8 +3,7 @@
 (() => {
   const root=document.documentElement, sheet=document.getElementById('geodema-night');
   const system=matchMedia('(prefers-color-scheme: dark)'), key='geodema:appearance';
-  const valid=v=>v==='dark'||v==='light';
-  const read=()=>{try{return localStorage.getItem(key);}catch{return null;}};
+  const read=()=>{try{const v=localStorage.getItem(key);return v==='dark'||v==='light'?v:null;}catch{return null;}};
   let choice=read();
   const sourceSelector='source[data-feature-night]';
   const nightMedia=()=>root.dataset.theme==='dark'?'all':'not all';
@@ -17,7 +16,7 @@
     }
   }
   function apply(){
-    const next=valid(choice)?choice:(system.matches?'dark':'light'),changed=root.dataset.theme!==next;
+    const next=choice??(system.matches?'dark':'light'),changed=root.dataset.theme!==next;
     root.dataset.theme=next;
     sheet.media=next==='dark'?'all':'not all';
     for(const m of document.querySelectorAll('meta[name="theme-color"]'))m.content=next==='dark'?'#060c15':'#f3f6f9';
@@ -28,7 +27,7 @@
   // On an OS/override mismatch, pair newly parsed <source>s with the resolved theme before
   // their lazy images paint, even when arriving on a fragment half-way down the page.
   let parsing;
-  if(valid(choice)&&system.matches!==(choice==='dark')){
+  if(choice&&system.matches!==(choice==='dark')){
     parsing=new MutationObserver(records=>{
       for(const r of records)for(const n of r.addedNodes){
         if(n.nodeType!==1)continue;
@@ -42,7 +41,7 @@
   document.addEventListener('click',e=>{const b=e.target.closest?.('[data-theme-toggle]');if(!b)return;
     choice=root.dataset.theme==='dark'?'light':'dark';try{localStorage.setItem(key,choice);}catch{}apply();
   });
-  system.addEventListener('change',()=>{if(!valid(choice))apply();});
+  system.addEventListener('change',()=>{if(!choice)apply();});
   window.addEventListener('storage',e=>{if(e.key===key||e.key===null){choice=read();apply();}});
   window.addEventListener('pageshow',e=>{if(e.persisted){choice=read();apply();}});
 })();
